@@ -1,0 +1,99 @@
+1. Project Summary
+
+Mini Redis Clone is a Java implementation of a lightweight in-memory key-value database. It demonstrates how Redis-like systems accept client commands over sockets, store values in memory, expire keys with TTL, evict old entries with LRU policy, persist cache data to disk, and support multiple clients at the same time.
+
+2. Real-world use cases
+
+- Fast lookup cache for user sessions, tokens, profile data, and frequently accessed database rows.
+- Temporary storage for OTPs, verification links, and rate-limit counters using TTL.
+- Backend performance layer that reduces repeated database calls.
+- Interview and academic demonstration of system design, DSA, networking, and concurrency.
+
+3. How the project works internally
+
+The server starts on a TCP port and waits for socket connections. Every connected client is assigned a separate ClientHandler thread. The client sends text commands such as SET, GET, DELETE, or EXIT. CommandProcessor validates the command and forwards the operation to CacheStorage. CacheStorage owns the in-memory cache, handles TTL expiration, triggers persistence after mutations, and exposes snapshots for the Swing UI.
+
+4. Architecture explanation
+
+- Server: Opens a ServerSocket, accepts clients, and starts a thread for each client.
+- ClientHandler: Reads commands from one socket client and writes responses back.
+- CommandProcessor: Converts command text into cache operations.
+- CacheStorage: Main storage service. It provides synchronized SET, GET, DELETE, TTL cleanup, snapshots, and file persistence.
+- LRUCache: Extends LinkedHashMap with access-order enabled to remove the least recently used key when the configured entry limit is exceeded.
+- SwingFrontend: Presentation-friendly GUI that starts an embedded server, sends commands to the same storage object, displays active cache data, and shows logs.
+- ConsoleClient: Simple terminal client for manual socket testing.
+
+5. Data structures used
+
+- HashMap concept: Key-value storage is based on Java map behavior for direct lookup by key.
+- LinkedHashMap: Used in LRUCache because it combines hash-table lookup with a linked list that preserves access order.
+- ArrayList: Used temporarily during TTL cleanup to collect expired keys before removal.
+- Map snapshot: Used by the Swing UI to display current visible cache entries.
+
+6. DSA concepts involved
+
+- Hashing: Keys are hashed internally by the map, giving near constant-time lookup.
+- LRU cache: Recently accessed entries move toward the most recent side of the linked structure.
+- Eviction: When capacity is exceeded, the least recently used entry is removed.
+- TTL expiration: Time-based invalidation removes stale keys.
+- Synchronization: Shared cache operations are synchronized to protect data during concurrent client access.
+
+7. Time complexity analysis
+
+- SET: O(1) average for insertion or update.
+- GET: O(1) average for lookup and access-order update.
+- DELETE: O(1) average for removal.
+- LRU eviction: O(1) because LinkedHashMap identifies the eldest entry directly.
+- TTL cleanup: O(n), where n is the number of keys, because the cleaner scans all entries.
+- Snapshot for UI: O(n), because all visible entries are copied for display.
+- Persistence: O(n), because the current cache is written to a local file.
+
+8. Cache eviction explanation
+
+The cache has a maximum entry limit. LRUCache extends LinkedHashMap using accessOrder=true. This means every successful GET and SET updates the usage order. When a new entry causes the cache size to exceed the limit, removeEldestEntry automatically removes the least recently used key. The event listener logs a message such as "Cache eviction: removed least recently used key".
+
+9. Socket programming explanation
+
+The Server class creates a ServerSocket on port 6379 by default. A client connects using a normal Socket. ClientHandler wraps the socket input stream with BufferedReader and the output stream with PrintWriter. Commands are sent as plain text lines. The server processes one command at a time and sends a single-line response. EXIT closes that client connection.
+
+10. OOP concepts used
+
+- Encapsulation: CacheStorage hides cache, TTL, and persistence details behind public methods.
+- Abstraction: CommandProcessor abstracts command parsing away from networking and UI code.
+- Inheritance: LRUCache extends LinkedHashMap to specialize eviction behavior.
+- Interface usage: CacheEventListener decouples logging from the storage and server logic.
+- Single responsibility: Server accepts clients, ClientHandler manages a client, CacheStorage manages data, and SwingFrontend manages presentation.
+
+11. Frontend explanation
+
+The Swing frontend contains input fields for key, value, and optional TTL. SET, GET, and DELETE buttons execute cache commands. A table shows active cache entries and remaining TTL values. A log panel displays events including server startup, client connections, cache evictions, key expirations, persistence events, and UI command responses.
+
+12. Step-by-step execution flow
+
+1. Compile the Java source files.
+2. Start SwingFrontend or Server.
+3. Server creates CacheStorage and loads saved data from data/cache-store.bin if present.
+4. Server listens for socket clients.
+5. Each client connection gets a ClientHandler thread.
+6. Client sends SET, GET, DELETE, or EXIT.
+7. CommandProcessor parses and validates the command.
+8. CacheStorage performs the requested operation.
+9. TTL cleanup runs in a background daemon thread.
+10. LRUCache evicts the least recently used key when capacity is exceeded.
+11. CacheStorage writes data to local persistent storage after changes.
+12. SwingFrontend refreshes the cache table and appends event logs.
+
+13. Interview explanation section
+
+This project is a compact version of Redis-like behavior. It uses socket programming for client-server communication, a synchronized in-memory map for fast cache operations, LinkedHashMap for LRU eviction, background cleanup for TTL, object serialization for local persistence, and multithreading so multiple clients can interact with the server at the same time. The strongest discussion points are why HashMap gives fast lookup, why LinkedHashMap is suitable for LRU, how synchronization protects shared data, and how TTL and persistence affect performance.
+
+14. Future improvements
+
+- Support values with spaces using a RESP-like protocol.
+- Add command authentication.
+- Add configurable persistence intervals instead of writing after every mutation.
+- Add better memory measurement based on bytes instead of entry count.
+- Add unit tests and integration tests.
+- Add replication or clustering concepts.
+- Add metrics for hit rate, miss rate, eviction count, and active client count.
+- Add a richer Swing or web dashboard.
